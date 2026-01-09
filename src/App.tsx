@@ -20,6 +20,7 @@ const useSelectedChain = (): SupportedChain => {
 
 function App() {
   const [activity, setActivity] = useState<ActivityState>({ loading: false, rows: [] })
+  const [inputAddress, setInputAddress] = useState<string>('')
   const selectedChain = useSelectedChain()
 
   const { address, status, network, error, connect, disconnect, switchChain, setSelectedChainId } =
@@ -32,22 +33,24 @@ function App() {
     walletChainId !== selectedChain.chainId &&
     !!network
 
+  const effectiveAddress = inputAddress || address
+
   useEffect(() => {
     const load = async () => {
-      if (!address) {
+      if (!effectiveAddress) {
         setActivity({ loading: false, rows: [] })
         return
       }
       setActivity((prev) => ({ ...prev, loading: true, error: undefined }))
       try {
-        const rows = await fetchActivityForChain(address, selectedChain)
+        const rows = await fetchActivityForChain(effectiveAddress, selectedChain)
         setActivity({ loading: false, rows })
       } catch (err: unknown) {
         setActivity({ loading: false, rows: [], error: (err as Error).message })
       }
     }
     void load()
-  }, [address, selectedChain])
+  }, [effectiveAddress, selectedChain])
 
   const handleChainChange = async (chainId: number) => {
     setSelectedChainId(chainId)
@@ -106,6 +109,18 @@ function App() {
                 : 'Not connected'}
             </span>
           </div>
+
+        
+        </div>
+        {/* Manual address input to load activity without a button click */}
+        <div className="panel-header">
+          <input
+            value={inputAddress}
+            onChange={(e) => setInputAddress(e.target.value.trim())}
+            placeholder="Paste any wallet address to load its last 10 transactions"
+            style={{ padding: '8px', borderRadius: '8px', width: '100%' }}
+            type="text"
+          />
         </div>
 
         <div className="grid">
@@ -155,10 +170,14 @@ function App() {
           <div className="pill">{selectedChain.nativeSymbol}</div>
         </div>
 
-        {!address && <div className="placeholder">Connect a wallet to load activity.</div>}
-        {address && activity.loading && <div className="placeholder">Loading activity…</div>}
-        {address && activity.error && <div className="alert">Error: {activity.error}</div>}
-        {address && !activity.loading && !activity.error && (
+        {!effectiveAddress && (
+          <div className="placeholder">
+            Enter a wallet address above or connect a wallet to load activity.
+          </div>
+        )}
+        {effectiveAddress && activity.loading && <div className="placeholder">Loading activity…</div>}
+        {effectiveAddress && activity.error && <div className="alert">Error: {activity.error}</div>}
+        {effectiveAddress && !activity.loading && !activity.error && (
           <div className="list">
             {activity.rows.length === 0 && (
               <div className="placeholder">No activity found for this chain.</div>

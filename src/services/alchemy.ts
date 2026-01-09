@@ -31,12 +31,19 @@ const coingeckoIds: Record<number, string> = {
 const parseUsdPrice = async (chain: SupportedChain) => {
   const id = coingeckoIds[chain.chainId]
   if (!id) return undefined
-  const res = await fetch(
-    `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`,
-  )
-  if (!res.ok) return undefined
-  const json = (await res.json()) as Record<string, { usd: number }>
-  return json[id]?.usd
+
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`,
+    )
+    if (!res.ok) return undefined
+
+    const json = (await res.json()) as Record<string, { usd: number }>
+    return json[id]?.usd
+  } catch {
+    // If CoinGecko is blocked, down, or CORS fails, just skip USD prices
+    return undefined
+  }
 }
 
 const alchemyRequest = async (url: string, payload: unknown) => {
